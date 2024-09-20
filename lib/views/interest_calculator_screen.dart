@@ -4,7 +4,7 @@ import 'package:wealthune/services/interest_calculator_service.dart';
 import 'package:wealthune/utils/colors.dart';
 
 class InterestCalculatorScreen extends StatefulWidget {
-  const InterestCalculatorScreen({Key? key}) : super(key: key);
+  const InterestCalculatorScreen({super.key});
 
   @override
   // Crée l'état pour le widget InterestCalculatorScreen

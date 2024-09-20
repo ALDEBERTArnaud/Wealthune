@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';  // Importation du package Flutter
+import 'package:provider/provider.dart';  // Importation du package Provider
 import 'package:wealthune/utils/colors.dart';  // Importation du fichier de couleurs personnalisées
+import 'package:wealthune/providers/currency_provider.dart';  // Importation du provider de devise
 import 'views/home_screen.dart';  // Importation de l'écran d'accueil
 import 'views/accounts_screen.dart';  // Importation de l'écran des comptes
 import 'views/crypto_screen.dart';  // Importation de l'écran des cryptomonnaies
 import 'views/savings_screen.dart';  // Importation de l'écran d'épargne
 import 'views/investments_screen.dart';  // Importation de l'écran des investissements
+import 'views/market_screen.dart';  // Importation du nouvel écran de marché
 
 void main() {
-  runApp(const MyApp());  // Point d'entrée de l'application Flutter, lance le widget racine (MyApp)
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CurrencyProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -21,27 +29,22 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         // Configuration du thème de l'application
         scaffoldBackgroundColor: AppColors.secondaryColor,  // Couleur de fond globale
-        fontFamily: 'Montserrat',  // Police de caractères par défaut
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          // Configuration du thème de la barre de navigation inférieure
-          selectedItemColor: AppColors.primaryColor,  // Couleur de l'élément sélectionné
-          unselectedItemColor: Colors.grey,  // Couleur des éléments non sélectionnés
-        )
+        primaryColor: AppColors.primaryColor,  // Couleur principale
+        colorScheme: ColorScheme.fromSwatch().copyWith(secondary: AppColors.accentColor),  // Configuration de la palette de couleurs
       ),
-      home: const MainScreen(),  // Page d'accueil de l'application
+      home: const MyHomePage(),  // Page d'accueil de l'application
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _MainScreenState createState() => _MainScreenState();  // Création de l'état de l'écran principal
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;  // Indice de l'élément actuellement sélectionné dans la barre de navigation
 
   // Liste des widgets à afficher pour chaque élément de la barre de navigation
@@ -51,6 +54,7 @@ class _MainScreenState extends State<MainScreen> {
     CryptoScreen(),
     SavingsScreen(),
     InvestmentsScreen(),
+    MarketScreen(), // Ajout du nouvel écran
   ];
 
   // Méthode appelée lorsque l'utilisateur sélectionne un élément dans la barre de navigation
@@ -81,9 +85,11 @@ class _MainScreenState extends State<MainScreen> {
               BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Comptes', backgroundColor: AppColors.secondaryColor),
               BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'Crypto', backgroundColor: AppColors.secondaryColor),
               BottomNavigationBarItem(icon: Icon(Icons.savings), label: 'Épargne', backgroundColor: AppColors.secondaryColor),
-              BottomNavigationBarItem(icon: Icon(Icons.candlestick_chart), label: 'Actions & ETFs', backgroundColor: AppColors.secondaryColor),
+              BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Investissements', backgroundColor: AppColors.secondaryColor),
+              BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Marché', backgroundColor: AppColors.secondaryColor), // Nouvel élément
             ],
             currentIndex: _selectedIndex,  // Indice de l'élément actuellement sélectionné
+            selectedItemColor: AppColors.primaryColor,  // Couleur de l'élément sélectionné
             onTap: _onItemTapped,  // Appelle la méthode _onItemTapped lorsque l'utilisateur sélectionne un élément
           ),
         ],
