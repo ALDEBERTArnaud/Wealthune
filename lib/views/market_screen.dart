@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wealthune/utils/colors.dart';
 import 'package:wealthune/services/market_service.dart';
-import 'package:wealthune/widgets/market_item_card.dart';
 import 'package:wealthune/providers/currency_provider.dart';
+import 'package:wealthune/utils/colors.dart';
+import 'package:wealthune/widgets/market_item_card.dart';
+
 
 class MarketScreen extends StatefulWidget {
   const MarketScreen({Key? key}) : super(key: key);
@@ -13,7 +14,6 @@ class MarketScreen extends StatefulWidget {
 }
 
 class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
   final MarketService _marketService = MarketService();
   List<MarketItem> _stocks = [];
   List<MarketItem> _etfs = [];
@@ -23,6 +23,8 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
   List<MarketItem> _filteredCryptos = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  double _loadingProgress = 0.0;
+  late TabController _tabController;
 
   @override
   void initState() {
@@ -31,16 +33,38 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
     _fetchData();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchData() async {
     setState(() {
       _isLoading = true;
+      _loadingProgress = 0.0;
     });
 
     try {
       final currency = Provider.of<CurrencyProvider>(context, listen: false).currency;
-      final stocks = await _marketService.getStocks(currency);
-      final etfs = await _marketService.getETFs(currency);
-      final cryptos = await _marketService.getCryptocurrencies(currency);
+      
+      final stocks = await _marketService.getStocks(currency, (progress) {
+        setState(() {
+          _loadingProgress = progress / 3;
+        });
+      });
+      
+      final etfs = await _marketService.getETFs(currency, (progress) {
+        setState(() {
+          _loadingProgress = 1/3 + progress / 3;
+        });
+      });
+      
+      final cryptos = await _marketService.getCryptocurrencies(currency, (progress) {
+        setState(() {
+          _loadingProgress = 2/3 + progress / 3;
+        });
+      });
 
       setState(() {
         _stocks = stocks;
@@ -85,75 +109,47 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: Image.asset('assets/logo_wealthune.png', height: 50),
         title: const Text('Marché', style: TextStyle(color: AppColors.primaryColor)),
         backgroundColor: AppColors.secondaryColor,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (String currency) {
-              Provider.of<CurrencyProvider>(context, listen: false).setCurrency(currency);
-              _fetchData();
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'EUR',
-                child: Text('Euro (€)'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'USD',
-                child: Text('Dollar (\$)'),
-              ),
-            ],
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Actions'),
             Tab(text: 'ETFs'),
-            Tab(text: 'Cryptomonnaies'),
+            Tab(text: 'Crypto'),
           ],
-          labelColor: AppColors.primaryColor,
-          unselectedLabelColor: Colors.grey,
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(value: _loadingProgress),
+                  const SizedBox(height: 16),
+                  Text('${(_loadingProgress * 100).toInt()}%'),
+                ],
+              ),
+            )
           : Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
                     onChanged: _filterItems,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Rechercher',
-                      labelStyle: TextStyle(color: AppColors.primaryColor),
                       prefixIcon: Icon(Icons.search, color: AppColors.primaryColor),
-                      fillColor: AppColors.secondaryColor,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.primaryColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.primaryColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
-                      ),
                     ),
-                    style: TextStyle(color: AppColors.primaryColor),
                   ),
                 ),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildMarketList(_filteredStocks, 'stock'),
-                      _buildMarketList(_filteredEtfs, 'etf'),
-                      _buildMarketList(_filteredCryptos, 'crypto'),
+                      _buildListView(_filteredStocks),
+                      _buildListView(_filteredEtfs),
+                      _buildListView(_filteredCryptos),
                     ],
                   ),
                 ),
@@ -162,20 +158,12 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildMarketList(List<MarketItem> items, String type) {
-    return items.isEmpty
-        ? const Center(child: Text('Aucune donnée disponible'))
-        : ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              return MarketItemCard(item: items[index], type: type);
-            },
-          );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Widget _buildListView(List<MarketItem> items) {
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return MarketItemCard(item: items[index]);
+      },
+    );
   }
 }

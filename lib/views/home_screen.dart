@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wealthune/utils/colors.dart';
 import 'package:wealthune/views/interest_calculator_screen.dart';
 import 'package:wealthune/services/home_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  // Crée l'état pour le widget HomeScreen
-  // ignore: library_private_types_in_public_api
   _HomeScreenState createState() => _HomeScreenState();
 }
 
@@ -20,41 +17,28 @@ class _HomeScreenState extends State<HomeScreen> {
   double cryptoTotal = 0;
   double savingsTotal = 0;
   double investmentsTotal = 0;
+  final numberFormat = NumberFormat('#,##0', 'fr_FR');
 
   @override
   void initState() {
     super.initState();
-    fetchData(); // Appel de la fonction pour récupérer les données
+    fetchData();
   }
 
-  final numberFormat = NumberFormat('#,##0', 'fr_FR');
-
-  // Fonction pour récupérer les données
   void fetchData() async {
     var totals = await getTotalWealth();
-    bankAccountsTotal = totals['bankAccountsTotal']!;
-    cryptoTotal = totals['cryptoTotal']!;
-    savingsTotal = totals['savingsTotal']!;
-    investmentsTotal = totals['investmentsTotal']!;
-    setState(() {});
-  }
-
-  // Fonction pour obtenir la valeur totale depuis les préférences partagées
-  Future<double> getTotalFromService(SharedPreferences prefs, String key) async {
-    final stringValue = prefs.getString(key);
-    if (stringValue != null) {
-      // Si la valeur n'est pas nulle, essayez de la convertir en double
-      return double.tryParse(stringValue) ?? 0.0;
-    }
-    return 0.0; // Retourne 0.0 si la clé n'existe pas ou si la conversion échoue
+    setState(() {
+      bankAccountsTotal = totals['bankAccountsTotal']!;
+      cryptoTotal = totals['cryptoTotal']!;
+      savingsTotal = totals['savingsTotal']!;
+      investmentsTotal = totals['investmentsTotal']!;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Calcul du patrimoine total
     final double totalWealth = bankAccountsTotal + cryptoTotal + savingsTotal + investmentsTotal;
 
-    // Création des sections pour le PieChart
     final List<PieChartSectionData> sections = [
       PieChartSectionData(
         color: Colors.blue,
@@ -104,25 +88,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Image.asset('assets/logo_wealthune.png', height: 50,),
+        leading: Image.asset('assets/logo_wealthune.png', height: 50),
         title: const Text('Wealthune', style: TextStyle(color: AppColors.primaryColor)),
         backgroundColor: AppColors.secondaryColor,
       ),
       body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // Aligner les widgets enfants à gauche
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Container(
               height: 1,
-              color: Colors.white.withAlpha(50), // Légère barre blanche
+              color: Colors.white.withAlpha(50),
             ),
             Container(
               height: 10,
             ),
             const Padding(
-              padding: EdgeInsets.only(left: 12.0), // Ajouter une marge tout autour
+              padding: EdgeInsets.only(left: 12.0),
               child: Text(
-                'Patrimoine Actuel :', // Texte fixe
+                'Patrimoine Actuel :',
                 style: TextStyle(
                   color: AppColors.primaryColor,
                   fontSize: 16,
@@ -131,12 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(left: 25.0), // Ajouter une marge à gauche
+              padding: const EdgeInsets.only(left: 25.0),
               child: Text(
-                '${numberFormat.format(totalWealth)} €', // Remplacez par le total calculé
+                '${numberFormat.format(totalWealth)} €',
                 style: const TextStyle(
                   color: AppColors.primaryColor,
-                  fontSize: 40, // Taille de police plus grande pour le montant
+                  fontSize: 40,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -149,14 +133,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderData: FlBorderData(show: false),
                   sectionsSpace: 0,
                   centerSpaceRadius: 40,
-                  sections: sections
+                  sections: sections,
                 ),
               ),
             ),
             const SizedBox(height: 80),
-            buildWealthList(), // Nouvelle méthode pour afficher la liste
+            buildWealthList(),
             const SizedBox(height: 40),
-            Center( // Centrer le bouton
+            Center(
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -174,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Fonction pour construire la liste des éléments de patrimoine
   Widget buildWealthList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,25 +170,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Fonction pour construire un élément de patrimoine
   Widget buildWealthListItem(Color color, String title, double amount) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
       child: Row(
         children: [
           Container(
-            width: 12,
-            height: 12,
+            width: 16,
+            height: 16,
             decoration: BoxDecoration(
               color: color,
-              shape: BoxShape.rectangle,
+              shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            '$title : ${numberFormat.format(amount)} €',
-            style: const TextStyle(fontSize: 16, color: AppColors.primaryColor),
-          ),
+          Text(title),
+          const Spacer(),
+          Text('${numberFormat.format(amount)} €'),
         ],
       ),
     );

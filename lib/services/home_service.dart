@@ -1,27 +1,24 @@
 import 'package:wealthune/services/bank_account_service.dart';
 import 'package:wealthune/services/crypto_service.dart';
-import 'package:wealthune/services/investment_service.dart';
 import 'package:wealthune/services/savings_account_service.dart';
+import 'package:wealthune/services/investment_service.dart';
 
-/// Calcule la valeur totale du patrimoine en additionnant les soldes de différents comptes et investissements.
 Future<Map<String, double>> getTotalWealth() async {
-  // Utilisation du service BankAccountService pour obtenir le solde total des comptes bancaires.
   final bankAccountService = BankAccountService();
-  double bankAccountsTotal = await bankAccountService.getTotalBalance();
-
-  // Utilisation du service CryptoService pour obtenir la valeur totale des cryptomonnaies.
   final cryptoService = CryptoService();
-  double cryptoTotal = await cryptoService.getTotalCryptoValue();
-
-  // Utilisation du service InvestmentService pour obtenir la valeur totale des investissements.
+  final savingsService = SavingsAccountService();
   final investmentService = InvestmentService();
-  double investmentsTotal = await investmentService.getTotalInvestmentValue();
 
-  // Utilisation du service SavingsAccountService pour obtenir le solde total des comptes d'épargne.
-  final savingsAccountService = SavingsAccountService();
-  double savingsTotal = await savingsAccountService.getTotalSavings();
+  final accounts = await bankAccountService.getAccounts();
+  final cryptos = await cryptoService.getCryptocurrencies();
+  final savings = await savingsService.getSavingsAccounts();
+  final investments = await investmentService.getInvestments();
 
-  // Retourne un Map avec la valeur totale de chaque catégorie d'actifs.
+  double bankAccountsTotal = accounts.fold(0, (sum, account) => sum + account.balance);
+  double cryptoTotal = cryptos.fold(0, (sum, crypto) => sum + (crypto.quantity * crypto.currentPrice));
+  double savingsTotal = savings.fold(0, (sum, saving) => sum + saving.balance);
+  double investmentsTotal = investments.fold(0, (sum, investment) => sum + (investment.quantity * investment.currentPrice));
+
   return {
     'bankAccountsTotal': bankAccountsTotal,
     'cryptoTotal': cryptoTotal,
