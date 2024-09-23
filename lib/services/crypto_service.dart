@@ -2,61 +2,53 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cryptocurrency.dart';
 
-/// Service pour gérer les opérations liées aux cryptomonnaies.
 class CryptoService {
-  // Clés de stockage pour les SharedPreferences.
   static const String _storageKeyCryptocurrencies = 'cryptocurrencies';
-  static const String _storageKeyTotalCrypto = 'totalCrypto';
 
-  /// Récupère la liste des cryptomonnaies depuis les SharedPreferences.
   Future<List<Cryptocurrency>> getCryptocurrencies() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_storageKeyCryptocurrencies);
     if (data != null) {
-      Iterable l = json.decode(data);
-      return List<Cryptocurrency>.from(l.map((model) => Cryptocurrency.fromJson(model)));
+      List<dynamic> jsonData = jsonDecode(data);
+      return jsonData.map((item) => Cryptocurrency.fromJson(item)).toList();
     }
     return [];
   }
 
-  /// Calcule la valeur totale des cryptomonnaies et la sauvegarde.
-  Future<double> getTotalCryptoValue() async {
-    final cryptocurrencies = await getCryptocurrencies();
-    final totalCryptoValue = cryptocurrencies.fold(0.0, (sum, crypto) => sum + (crypto.quantity * crypto.currentPrice));
+  Future<void> saveCryptocurrency(Cryptocurrency crypto) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_storageKeyTotalCrypto, totalCryptoValue);
-    return totalCryptoValue;
+    List<Cryptocurrency> cryptos = await getCryptocurrencies();
+    cryptos.add(crypto);
+    List<Map<String, dynamic>> jsonData =
+        cryptos.map((c) => c.toJson()).toList();
+    await prefs.setString(_storageKeyCryptocurrencies, jsonEncode(jsonData));
   }
 
-  /// Sauvegarde une nouvelle cryptomonnaie dans les SharedPreferences.
-  Future<void> saveCryptocurrency(Cryptocurrency cryptocurrency) async {
-    final cryptocurrencies = await getCryptocurrencies();
-    cryptocurrencies.add(cryptocurrency);
-    await _saveToPrefs(cryptocurrencies);
-  }
-
-  /// Aide à sauvegarder la liste des cryptomonnaies dans les SharedPreferences.
-  Future<void> _saveToPrefs(List<Cryptocurrency> cryptocurrencies) async {
+  Future<void> updateCryptocurrency(Cryptocurrency updatedCrypto) async {
     final prefs = await SharedPreferences.getInstance();
-    final data = json.encode(cryptocurrencies.map((e) => e.toJson()).toList());
-    prefs.setString(_storageKeyCryptocurrencies, data);
-  }
-
-  /// Met à jour une cryptomonnaie existante dans les SharedPreferences.
-  Future<void> updateCryptocurrency(Cryptocurrency updatedCryptocurrency) async {
-    final cryptocurrencies = await getCryptocurrencies();
-    final cryptoIndex = cryptocurrencies.indexWhere((crypto) => crypto.id == updatedCryptocurrency.id);
-    if (cryptoIndex != -1) {
-      cryptocurrencies[cryptoIndex] = updatedCryptocurrency;
-      await _saveToPrefs(cryptocurrencies);
+    List<Cryptocurrency> cryptos = await getCryptocurrencies();
+    int index =
+        cryptos.indexWhere((crypto) => crypto.id == updatedCrypto.id);
+    if (index != -1) {
+      cryptos[index] = updatedCrypto;
+      List<Map<String, dynamic>> jsonData =
+          cryptos.map((c) => c.toJson()).toList();
+      await prefs.setString(_storageKeyCryptocurrencies, jsonEncode(jsonData));
     }
   }
 
-  /// Supprime une cryptomonnaie spécifique des SharedPreferences.
-  Future<void> deleteCryptocurrency(String cryptocurrencyId) async {
-    final cryptocurrencies = await getCryptocurrencies();
-    cryptocurrencies.removeWhere((crypto) => crypto.id == cryptocurrencyId);
-    await _saveToPrefs(cryptocurrencies);
+  Future<void> deleteCryptocurrency(String cryptoId) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<Cryptocurrency> cryptos = await getCryptocurrencies();
+    cryptos.removeWhere((crypto) => crypto.id == cryptoId);
+    List<Map<String, dynamic>> jsonData =
+        cryptos.map((c) => c.toJson()).toList();
+    await prefs.setString(_storageKeyCryptocurrencies, jsonEncode(jsonData));
   }
 
+  // Méthode pour obtenir les symboles des cryptomonnaies si nécessaire
+  Future<List<String>> getCryptoSymbols() async {
+    List<Cryptocurrency> cryptos = await getCryptocurrencies();
+    return cryptos.map((crypto) => crypto.name).toList();
+  }
 }

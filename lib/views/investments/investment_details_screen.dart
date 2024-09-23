@@ -8,10 +8,13 @@ class InvestmentDetailsScreen extends StatefulWidget {
   final Investment investment; // L'investissement à afficher et modifier.
   final Function onInvestmentUpdated; // Callback pour les mises à jour de l'investissement.
 
-  const InvestmentDetailsScreen({super.key, required this.investment, required this.onInvestmentUpdated});
+  const InvestmentDetailsScreen({
+    Key? key,
+    required this.investment,
+    required this.onInvestmentUpdated,
+  }) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _InvestmentDetailsScreenState createState() => _InvestmentDetailsScreenState();
 }
 
@@ -20,9 +23,9 @@ class _InvestmentDetailsScreenState extends State<InvestmentDetailsScreen> {
   // Contrôleurs pour les champs de texte.
   late TextEditingController _nameController;
   late TextEditingController _quantityController;
-  late TextEditingController _purchasePriceController;
   late TextEditingController _currentPriceController;
-  late TextEditingController _interestRateController;
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -30,157 +33,175 @@ class _InvestmentDetailsScreenState extends State<InvestmentDetailsScreen> {
     // Initialisation des contrôleurs avec les valeurs actuelles de l'investissement.
     _nameController = TextEditingController(text: widget.investment.name);
     _quantityController = TextEditingController(text: widget.investment.quantity.toString());
-    _purchasePriceController = TextEditingController(text: widget.investment.purchasePrice.toString());
     _currentPriceController = TextEditingController(text: widget.investment.currentPrice.toString());
-    _interestRateController = TextEditingController(text: widget.investment.interestRate.toString());
   }
 
   /// Met à jour les informations de l'investissement.
   void _updateInvestment() {
-    final updatedInvestment = Investment(
-      id: widget.investment.id,
-      name: _nameController.text,
-      quantity: double.tryParse(_quantityController.text) ?? widget.investment.quantity,
-      purchasePrice: double.tryParse(_purchasePriceController.text) ?? widget.investment.purchasePrice,
-      currentPrice: double.tryParse(_currentPriceController.text) ?? widget.investment.currentPrice,
-      interestRate: double.tryParse(_interestRateController.text) ?? widget.investment.interestRate,
-    );
+    if (_formKey.currentState!.validate()) {
+      final updatedInvestment = Investment(
+        id: widget.investment.id,
+        name: _nameController.text,
+        quantity: double.tryParse(_quantityController.text) ?? widget.investment.quantity,
+        currentPrice: double.tryParse(_currentPriceController.text) ?? widget.investment.currentPrice,
+      );
 
-    // Appel au service pour mettre à jour l'investissement.
-    _investmentService.updateInvestment(updatedInvestment).then((_) {
-      widget.onInvestmentUpdated(); // Appeler le callback après la mise à jour.
-      Navigator.of(context).pop(); // Retour à l'écran précédent.
-    }).catchError((error) {
-      // Gérer l'erreur ici.
-    });
+      // Appel au service pour mettre à jour l'investissement.
+      _investmentService.updateInvestment(updatedInvestment).then((_) {
+        widget.onInvestmentUpdated(); // Appeler le callback après la mise à jour.
+        Navigator.of(context).pop(); // Retour à l'écran précédent.
+      }).catchError((error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la mise à jour: $error')),
+        );
+      });
+    }
   }
 
   /// Supprime l'investissement actuel.
   void _deleteInvestment() {
-    _investmentService.deleteInvestment(widget.investment.id).then((_) {
-      widget.onInvestmentUpdated(); // Appeler le callback après la suppression.
-      Navigator.of(context).pop(); // Retour à l'écran précédent.
-    }).catchError((error) {
-      // Gérer l'erreur ici.
-    });
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cet investissement?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Fermer le dialogue
+            },
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              _investmentService.deleteInvestment(widget.investment.id).then((_) {
+                widget.onInvestmentUpdated(); // Appeler le callback après la suppression.
+                Navigator.of(ctx).pop(); // Fermer le dialogue
+                Navigator.of(context).pop(); // Retour à l'écran précédent
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Erreur lors de la suppression: $error')),
+                );
+              });
+            },
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Construction de l'interface utilisateur de l'écran.
+    double totalValue = widget.investment.quantity * widget.investment.currentPrice;
+
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: AppColors.primaryColor),
-        title: const Text('Détails de l\'Action/ETF', style: TextStyle(color: AppColors.primaryColor)),
+        title: const Text(
+          "Détails de l'Investissement",
+          style: TextStyle(color: AppColors.primaryColor),
+        ),
         backgroundColor: AppColors.secondaryColor,
+        iconTheme: const IconThemeData(color: AppColors.primaryColor),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            // Champ de texte pour le nom de l'investissement.
-            TextFormField(
-              controller: _nameController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Nom de l\'Investissement',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Champ de texte pour le nom de l'investissement.
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Nom de l\'investissement'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un nom d\'investissement';
+                  }
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour la quantité.
-            TextFormField(
-              controller: _quantityController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Quantité',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+              const SizedBox(height: 16.0),
+              // Champ de texte pour la quantité.
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Quantité'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une quantité';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour le prix d'achat.
-            TextFormField(
-              controller: _purchasePriceController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Prix d\'Achat',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+              const SizedBox(height: 16.0),
+              // Champ de texte pour le prix actuel.
+              TextFormField(
+                controller: _currentPriceController,
+                decoration: const InputDecoration(labelText: 'Prix actuel'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un prix actuel';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour le prix actuel.
-            TextFormField(
-              controller: _currentPriceController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Prix Actuel',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
+              const SizedBox(height: 16.0),
+              // Affichage de la valeur totale.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Valeur Totale: ${totalValue.toStringAsFixed(2)} €',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour le taux d'intérêt.
-            TextFormField(
-              controller: _interestRateController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Taux d\'Intérêt (%)',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
+              const SizedBox(height: 30),
+              // Bouton pour mettre à jour l'investissement.
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _updateInvestment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.confirmationColor,
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                  ),
+                  child: const Text(
+                    'Modifier',
+                    style: TextStyle(color: AppColors.secondaryColor, fontSize: 16.0),
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            // Bouton pour mettre à jour l'investissement.
-            ElevatedButton(
-              onPressed: _updateInvestment,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.confirmationColor),
-              child: const Text('Modifier', style: TextStyle(color: AppColors.secondaryColor)),
-            ),
-            const SizedBox(height: 10),
-            // Bouton pour supprimer l'investissement.
-            ElevatedButton(
-              onPressed: _deleteInvestment,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorColor),
-              child: const Text('Supprimer', style: TextStyle(color: AppColors.secondaryColor)),
-            ),
-          ],
+              const SizedBox(height: 15),
+              // Bouton pour supprimer l'investissement.
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _deleteInvestment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.errorColor,
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                  ),
+                  child: const Text(
+                    'Supprimer',
+                    style: TextStyle(color: AppColors.secondaryColor, fontSize: 16.0),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -191,9 +212,7 @@ class _InvestmentDetailsScreenState extends State<InvestmentDetailsScreen> {
     // Nettoyage des contrôleurs lors de la destruction de l'état.
     _nameController.dispose();
     _quantityController.dispose();
-    _purchasePriceController.dispose();
     _currentPriceController.dispose();
-    _interestRateController.dispose();
     super.dispose();
   }
 }

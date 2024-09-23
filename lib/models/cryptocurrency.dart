@@ -1,40 +1,35 @@
-/// Classe représentant une cryptomonnaie.
-class Cryptocurrency {
-  // Propriétés d'une cryptomonnaie.
-  String id;             // Identifiant de la cryptomonnaie.
-  String name;           // Nom de la cryptomonnaie.
-  double quantity;       // Quantité possédée.
-  double currentPrice;   // Prix actuel de la cryptomonnaie.
-  double interestRate;   // Taux d'intérêt (si applicable).
+import 'dart:convert';
 
-  /// Constructeur pour initialiser une cryptomonnaie.
+class Cryptocurrency {
+  final String id;
+  final String name;
+  final double quantity;
+  final double currentPrice;
+
   Cryptocurrency({
     required this.id,
     required this.name,
     required this.quantity,
     required this.currentPrice,
-    required this.interestRate,
   });
 
-  /// Convertit un objet Cryptocurrency en Map pour la sérialisation JSON.
+  // Méthode pour convertir un objet Cryptocurrency en JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'quantity': quantity,
       'currentPrice': currentPrice,
-      'interestRate': interestRate,
     };
   }
 
-  /// Crée une instance de Cryptocurrency à partir de données JSON.
-  factory Cryptocurrency.fromJson(Map<String, dynamic> jsonData) {
+  // Méthode pour créer un objet Cryptocurrency à partir du JSON
+  factory Cryptocurrency.fromJson(Map<String, dynamic> json) {
     return Cryptocurrency(
-      id: jsonData['id'],
-      name: jsonData['name'],
-      quantity: jsonData['quantity'],
-      currentPrice: jsonData['currentPrice'],
-      interestRate: jsonData['interestRate'],
+      id: json['id'],
+      name: json['name'],
+      quantity: (json['quantity'] as num).toDouble(),
+      currentPrice: (json['currentPrice'] as num).toDouble(),
     );
   }
 }

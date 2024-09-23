@@ -5,7 +5,9 @@ import 'package:wealthune/utils/colors.dart';
 
 /// Écran pour créer un nouveau compte d'épargne.
 class CreateSavingScreen extends StatefulWidget {
-  const CreateSavingScreen({super.key});
+  final Function onSavingsCreated;
+
+  const CreateSavingScreen({super.key, required this.onSavingsCreated});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -34,9 +36,13 @@ class _CreateSavingScreenState extends State<CreateSavingScreen> {
 
       // Appel au service pour sauvegarder le compte d'épargne.
       _savingsAccountService.saveSavingsAccount(newSavingsAccount).then((_) {
+        widget.onSavingsCreated();
         Navigator.of(context).pop(); // Retour à l'écran précédent après la création.
       }).catchError((error) {
         // Gérer l'erreur ici.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la création de l\'épargne: $error')),
+        );
       });
     }
   }
@@ -86,10 +92,11 @@ class _CreateSavingScreenState extends State<CreateSavingScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               // Champ de texte pour le solde initial.
               TextFormField(
                 controller: _balanceController,
+                keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Veuillez entrer un solde initial';
@@ -110,12 +117,12 @@ class _CreateSavingScreenState extends State<CreateSavingScreen> {
                     borderSide: BorderSide(color: Colors.white),
                   ),
                 ),
-                keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               // Champ de texte pour le taux d'intérêt.
               TextFormField(
                 controller: _interestRateController,
+                keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Veuillez entrer un taux d\'intérêt';
@@ -136,14 +143,11 @@ class _CreateSavingScreenState extends State<CreateSavingScreen> {
                     borderSide: BorderSide(color: Colors.white),
                   ),
                 ),
-                keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 20),
-              // Bouton pour soumettre le formulaire et ajouter le compte d'épargne.
               ElevatedButton(
                 onPressed: _submitForm,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryColor),
-                child: const Text('Ajouter', style: TextStyle(color: AppColors.secondaryColor)),
+                child: const Text('Créer l\'épargne'),
               ),
             ],
           ),

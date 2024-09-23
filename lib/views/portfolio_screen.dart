@@ -8,6 +8,14 @@ import 'package:wealthune/services/bank_account_service.dart';
 import 'package:wealthune/services/crypto_service.dart';
 import 'package:wealthune/services/savings_account_service.dart';
 import 'package:wealthune/services/investment_service.dart';
+import 'package:wealthune/views/account/account_details_screen.dart';
+import 'package:wealthune/views/crypto/crypto_details_screen.dart';
+import 'package:wealthune/views/savings/saving_details_screen.dart';
+import 'package:wealthune/views/investments/investment_details_screen.dart';
+import 'package:wealthune/views/account/create_account_screen.dart';
+import 'package:wealthune/views/crypto/create_crypto_screen.dart';
+import 'package:wealthune/views/savings/create_saving_screen.dart';
+import 'package:wealthune/views/investments/create_investment_screen.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({Key? key}) : super(key: key);
@@ -51,10 +59,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       ),
       body: ListView(
         children: [
-          _buildSection('Comptes bancaires', _accountsFuture, (account) => Text(account.name)),
-          _buildSection('Cryptomonnaies', _cryptosFuture, (crypto) => Text(crypto.name)),
-          _buildSection('Épargnes', _savingsFuture, (savings) => Text(savings.name)),
-          _buildSection('Investissements', _investmentsFuture, (investment) => Text(investment.name)),
+          _buildSection('Comptes bancaires', _accountsFuture, (account) => Text('${account.name}: ${account.balance} €')),
+          _buildSection('Cryptomonnaies', _cryptosFuture, (crypto) => Text('${crypto.name}: ${crypto.quantity}')),
+          _buildSection('Épargnes', _savingsFuture, (savings) => Text('${savings.name}: ${savings.balance} €')),
+          _buildSection('Investissements', _investmentsFuture, (investment) => Text('${investment.name}: ${investment.quantity} actions')),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -81,14 +89,69 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Text('Aucune donnée disponible');
             } else {
-              return Column(
-                children: snapshot.data!.map((item) => itemBuilder(item)).toList(),
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  final item = snapshot.data![index];
+                  return ListTile(
+                    title: itemBuilder(item),
+                    onTap: () {
+                      _navigateToDetailsScreen(context, item);
+                    },
+                  );
+                },
               );
             }
           },
         ),
       ],
     );
+  }
+
+  void _navigateToDetailsScreen(BuildContext context, dynamic item) {
+    if (item is BankAccount) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AccountDetailsScreen(
+            account: item,
+            onAccountUpdated: _refreshData,
+          ),
+        ),
+      );
+    } else if (item is Cryptocurrency) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CryptoDetailsScreen(
+            cryptocurrency: item,
+            onCryptoUpdated: _refreshData,
+          ),
+        ),
+      );
+    } else if (item is SavingsAccount) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SavingsDetailsScreen(
+            savingsAccount: item,
+            onSavingUpdated: _refreshData,
+          ),
+        ),
+      );
+    } else if (item is Investment) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InvestmentDetailsScreen(
+            investment: item,
+            onInvestmentUpdated: _refreshData,
+          ),
+        ),
+      );
+    }
   }
 
   void _showAddAssetMenu(BuildContext context) {
@@ -104,7 +167,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 title: const Text('Ajouter un compte bancaire'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Naviguer vers l'écran d'ajout de compte bancaire
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateAccountScreen(onAccountCreated: _refreshData)),
+                  );
                 },
               ),
               ListTile(
@@ -112,7 +178,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 title: const Text('Ajouter une cryptomonnaie'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Naviguer vers l'écran d'ajout de cryptomonnaie
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateCryptoScreen(onCryptoCreated: _refreshData)),
+                  );
                 },
               ),
               ListTile(
@@ -120,7 +189,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 title: const Text('Ajouter une épargne'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Naviguer vers l'écran d'ajout d'épargne
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateSavingScreen(onSavingsCreated: _refreshData)),
+                  );
                 },
               ),
               ListTile(
@@ -128,7 +200,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 title: const Text('Ajouter un investissement'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Naviguer vers l'écran d'ajout d'investissement
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreateInvestmentScreen(onInvestmentCreated: _refreshData)),
+                  );
                 },
               ),
             ],

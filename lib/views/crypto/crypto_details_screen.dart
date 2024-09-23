@@ -8,19 +8,23 @@ class CryptoDetailsScreen extends StatefulWidget {
   final Cryptocurrency cryptocurrency; // La cryptomonnaie à afficher et modifier.
   final Function onCryptoUpdated; // Callback pour les mises à jour de la cryptomonnaie.
 
-  const CryptoDetailsScreen({super.key, required this.cryptocurrency, required this.onCryptoUpdated});
+  const CryptoDetailsScreen({
+    Key? key,
+    required this.cryptocurrency,
+    required this.onCryptoUpdated,
+  }) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _CryptoDetailsScreenState createState() => _CryptoDetailsScreenState();
 }
 
 class _CryptoDetailsScreenState extends State<CryptoDetailsScreen> {
-  final CryptoService _cryptocurrencyService = CryptoService(); // Service pour gérer les données de cryptomonnaie.
+  final CryptoService _cryptoService = CryptoService(); // Service pour gérer les données de cryptomonnaie.
   late TextEditingController _nameController; // Contrôleur pour le nom de la cryptomonnaie.
   late TextEditingController _quantityController; // Contrôleur pour la quantité.
   late TextEditingController _currentPriceController; // Contrôleur pour le prix actuel.
-  late TextEditingController _interestRateController; // Contrôleur pour le taux d'intérêt.
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -29,132 +33,174 @@ class _CryptoDetailsScreenState extends State<CryptoDetailsScreen> {
     _nameController = TextEditingController(text: widget.cryptocurrency.name);
     _quantityController = TextEditingController(text: widget.cryptocurrency.quantity.toString());
     _currentPriceController = TextEditingController(text: widget.cryptocurrency.currentPrice.toString());
-    _interestRateController = TextEditingController(text: widget.cryptocurrency.interestRate.toString());
   }
 
   /// Met à jour les informations de la cryptomonnaie.
   void _updateCryptocurrency() {
-    final updatedCryptocurrency = Cryptocurrency(
-      id: widget.cryptocurrency.id,
-      name: _nameController.text,
-      quantity: double.tryParse(_quantityController.text) ?? widget.cryptocurrency.quantity,
-      currentPrice: double.tryParse(_currentPriceController.text) ?? widget.cryptocurrency.currentPrice,
-      interestRate: double.tryParse(_interestRateController.text) ?? widget.cryptocurrency.interestRate,
-    );
+    if (_formKey.currentState!.validate()) {
+      final updatedCryptocurrency = Cryptocurrency(
+        id: widget.cryptocurrency.id,
+        name: _nameController.text,
+        quantity: double.tryParse(_quantityController.text) ?? widget.cryptocurrency.quantity,
+        currentPrice: double.tryParse(_currentPriceController.text) ?? widget.cryptocurrency.currentPrice,
+      );
 
-    // Appel au service pour mettre à jour la cryptomonnaie.
-    _cryptocurrencyService.updateCryptocurrency(updatedCryptocurrency).then((_) {
-      widget.onCryptoUpdated(); // Appeler le callback après la mise à jour.
-      Navigator.of(context).pop(); // Retour à l'écran précédent.
-    }).catchError((error) {
-      // Gérer l'erreur ici.
-    });
+      // Appel au service pour mettre à jour la cryptomonnaie.
+      _cryptoService.updateCryptocurrency(updatedCryptocurrency).then((_) {
+        widget.onCryptoUpdated(); // Appeler le callback après la mise à jour.
+        Navigator.of(context).pop(); // Retour à l'écran précédent.
+      }).catchError((error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la mise à jour: $error')),
+        );
+      });
+    }
   }
 
   /// Supprime la cryptomonnaie actuelle.
   void _deleteCryptocurrency() {
-    _cryptocurrencyService.deleteCryptocurrency(widget.cryptocurrency.id).then((_) {
-      widget.onCryptoUpdated(); // Appeler le callback après la suppression.
-      Navigator.of(context).pop(); // Retour à l'écran précédent.
-    }).catchError((error) {
-      // Gérer l'erreur ici.
-    });
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette cryptomonnaie?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Fermer le dialogue
+            },
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              _cryptoService.deleteCryptocurrency(widget.cryptocurrency.id).then((_) {
+                widget.onCryptoUpdated(); // Appeler le callback après la suppression.
+                Navigator.of(ctx).pop(); // Fermer le dialogue
+                Navigator.of(context).pop(); // Retour à l'écran précédent
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Erreur lors de la suppression: $error')),
+                );
+              });
+            },
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Construction de l'interface utilisateur de l'écran.
+    double totalValue = widget.cryptocurrency.quantity * widget.cryptocurrency.currentPrice;
+
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: AppColors.primaryColor),
-        title: const Text('Détails de la Crypto', style: TextStyle(color: AppColors.primaryColor)),
+        title: const Text(
+          "Détails de la Cryptomonnaie",
+          style: TextStyle(color: AppColors.primaryColor),
+        ),
         backgroundColor: AppColors.secondaryColor,
+        iconTheme: const IconThemeData(color: AppColors.primaryColor),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            // Champ de texte pour le nom de la cryptomonnaie.
-            TextFormField(
-              controller: _nameController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Nom de la Cryptomonnaie',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Champ de texte pour le nom de la cryptomonnaie.
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Nom de la cryptomonnaie'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un nom de cryptomonnaie';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              // Champ de texte pour la quantité.
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Quantité'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une quantité';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              // Champ de texte pour le prix actuel.
+              TextFormField(
+                controller: _currentPriceController,
+                decoration: const InputDecoration(labelText: 'Prix actuel'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un prix actuel';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              // Affichage de la valeur totale.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Valeur Totale: ${totalValue.toStringAsFixed(2)} €',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour la quantité.
-            TextFormField(
-              controller: _quantityController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Quantité',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour le prix actuel.
-            TextFormField(
-              controller: _currentPriceController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Prix Actuel',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+              const SizedBox(height: 30),
+              // Bouton pour mettre à jour la cryptomonnaie.
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _updateCryptocurrency,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.confirmationColor,
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                  ),
+                  child: const Text(
+                    'Modifier',
+                    style: TextStyle(color: AppColors.secondaryColor, fontSize: 16.0),
+                  ),
                 ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // Champ de texte pour le taux d'intérêt.
-            TextFormField(
-              controller: _interestRateController,
-              style: const TextStyle(color: AppColors.primaryColor),
-              decoration: const InputDecoration(
-                labelText: 'Taux d\'Intérêt (%)',
-                labelStyle: TextStyle(color: AppColors.primaryColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+              const SizedBox(height: 15),
+              // Bouton pour supprimer la cryptomonnaie.
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _deleteCryptocurrency,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.errorColor,
+                    padding: const EdgeInsets.symmetric(vertical: 15.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                  ),
+                  child: const Text(
+                    'Supprimer',
+                    style: TextStyle(color: AppColors.secondaryColor, fontSize: 16.0),
+                  ),
                 ),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            // Bouton pour mettre à jour la cryptomonnaie.
-            ElevatedButton(
-              onPressed: _updateCryptocurrency,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.confirmationColor),
-              child: const Text('Modifier', style: TextStyle(color: AppColors.secondaryColor)),
-            ),
-            const SizedBox(height: 10),
-            // Bouton pour supprimer la cryptomonnaie.
-            ElevatedButton(
-              onPressed: _deleteCryptocurrency,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorColor),
-              child: const Text('Supprimer', style: TextStyle(color: AppColors.secondaryColor)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -166,7 +212,6 @@ class _CryptoDetailsScreenState extends State<CryptoDetailsScreen> {
     _nameController.dispose();
     _quantityController.dispose();
     _currentPriceController.dispose();
-    _interestRateController.dispose();
     super.dispose();
   }
 }
