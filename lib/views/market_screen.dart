@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:wealthune/models/market_item.dart';
 import 'package:wealthune/services/market_service.dart';
-import 'package:wealthune/providers/currency_provider.dart';
 import 'package:wealthune/utils/colors.dart';
 import 'package:wealthune/widgets/market_item_card.dart';
 
-
 class MarketScreen extends StatefulWidget {
-  const MarketScreen({Key? key}) : super(key: key);
-
   @override
   _MarketScreenState createState() => _MarketScreenState();
 }
 
 class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderStateMixin {
-  final MarketService _marketService = MarketService();
+  late TabController _tabController;
+  bool _isLoading = false;
+  double _loadingProgress = 0.0;
   List<MarketItem> _stocks = [];
   List<MarketItem> _etfs = [];
   List<MarketItem> _cryptos = [];
   List<MarketItem> _filteredStocks = [];
   List<MarketItem> _filteredEtfs = [];
   List<MarketItem> _filteredCryptos = [];
-  bool _isLoading = true;
   String _searchQuery = '';
-  double _loadingProgress = 0.0;
-  late TabController _tabController;
+  final MarketService _marketService = MarketService();
 
   @override
   void initState() {
@@ -46,21 +42,19 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
     });
 
     try {
-      final currency = Provider.of<CurrencyProvider>(context, listen: false).currency;
-      
-      final stocks = await _marketService.getStocks(currency, (progress) {
+      final stocks = await _marketService.getStocks((progress) {
         setState(() {
           _loadingProgress = progress / 3;
         });
       });
       
-      final etfs = await _marketService.getETFs(currency, (progress) {
+      final etfs = await _marketService.getETFs((progress) {
         setState(() {
           _loadingProgress = 1/3 + progress / 3;
         });
       });
       
-      final cryptos = await _marketService.getCryptocurrencies(currency, (progress) {
+      final cryptos = await _marketService.getCryptocurrencies((progress) {
         setState(() {
           _loadingProgress = 2/3 + progress / 3;
         });
@@ -109,37 +103,30 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Marché', style: TextStyle(color: AppColors.primaryColor)),
-        backgroundColor: AppColors.secondaryColor,
+        title: const Text('Marché'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Actions'),
             Tab(text: 'ETFs'),
-            Tab(text: 'Crypto'),
+            Tab(text: 'Cryptomonnaies'),
           ],
         ),
       ),
       body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(value: _loadingProgress),
-                  const SizedBox(height: 16),
-                  Text('${(_loadingProgress * 100).toInt()}%'),
-                ],
-              ),
-            )
+          ? Center(child: CircularProgressIndicator(value: _loadingProgress))
           : Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
                     onChanged: _filterItems,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Rechercher',
-                      prefixIcon: Icon(Icons.search, color: AppColors.primaryColor),
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
@@ -162,7 +149,8 @@ class _MarketScreenState extends State<MarketScreen> with SingleTickerProviderSt
     return ListView.builder(
       itemCount: items.length,
       itemBuilder: (context, index) {
-        return MarketItemCard(item: items[index]);
+        final item = items[index];
+        return MarketItemCard(item: item);
       },
     );
   }

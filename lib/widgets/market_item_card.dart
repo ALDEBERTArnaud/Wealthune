@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:wealthune/providers/currency_provider.dart';
-import 'package:wealthune/services/market_service.dart';
+import 'package:wealthune/models/market_item.dart';
 
 class MarketItemCard extends StatelessWidget {
   final MarketItem item;
@@ -10,8 +8,6 @@ class MarketItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = Provider.of<CurrencyProvider>(context).currency;
-
     IconData getIconForType() {
       switch (item.type) {
         case 'stock':
@@ -35,7 +31,7 @@ class MarketItemCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${item.price.toStringAsFixed(2)} $currency',
+              '${item.price.toStringAsFixed(2)} EUR',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             Text(

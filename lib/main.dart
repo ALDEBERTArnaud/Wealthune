@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:wealthune/utils/colors.dart';
-import 'package:wealthune/providers/currency_provider.dart';
 import 'views/home_screen.dart';
 import 'views/portfolio_screen.dart';
 import 'views/market_screen.dart';
 import 'views/settings_screen.dart';
 
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => CurrencyProvider(),
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

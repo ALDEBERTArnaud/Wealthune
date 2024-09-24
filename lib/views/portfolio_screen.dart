@@ -114,42 +114,22 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     if (item is BankAccount) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => AccountDetailsScreen(
-            account: item,
-            onAccountUpdated: _refreshData,
-          ),
-        ),
+        MaterialPageRoute(builder: (context) => AccountDetailsScreen(account: item, onAccountUpdated: _refreshData)),
       );
     } else if (item is Cryptocurrency) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => CryptoDetailsScreen(
-            cryptocurrency: item,
-            onCryptoUpdated: _refreshData,
-          ),
-        ),
+        MaterialPageRoute(builder: (context) => CryptoDetailsScreen(cryptocurrency: item, onCryptoUpdated: _refreshData)),
       );
     } else if (item is SavingsAccount) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => SavingsDetailsScreen(
-            savingsAccount: item,
-            onSavingUpdated: _refreshData,
-          ),
-        ),
+        MaterialPageRoute(builder: (context) => SavingsDetailsScreen(savingsAccount: item, onSavingUpdated: _refreshData)),
       );
     } else if (item is Investment) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => InvestmentDetailsScreen(
-            investment: item,
-            onInvestmentUpdated: _refreshData,
-          ),
-        ),
+        MaterialPageRoute(builder: (context) => InvestmentDetailsScreen(investment: item, onInvestmentUpdated: _refreshData)),
       );
     }
   }

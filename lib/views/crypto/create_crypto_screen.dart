@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:wealthune/models/cryptocurrency.dart';
 import 'package:wealthune/services/crypto_service.dart';
 import 'package:wealthune/utils/colors.dart';
+import 'package:wealthune/services/market_service.dart';
+import 'package:wealthune/models/market_item.dart';
 
-/// Écran pour créer une nouvelle cryptomonnaie.
 class CreateCryptoScreen extends StatefulWidget {
-  final Function onCryptoCreated; // Callback pour après la création de la cryptomonnaie.
+  final Function onCryptoCreated;
 
   const CreateCryptoScreen({super.key, required this.onCryptoCreated});
 
@@ -14,30 +15,49 @@ class CreateCryptoScreen extends StatefulWidget {
 }
 
 class _CreateCryptoScreenState extends State<CreateCryptoScreen> {
-  final CryptoService _cryptoService = CryptoService(); // Service pour gérer les données de cryptomonnaie.
+  final CryptoService _cryptoService = CryptoService();
+  final MarketService _marketService = MarketService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  late TextEditingController _nameController;
   late TextEditingController _quantityController;
-  late TextEditingController _currentPriceController;
+  late TextEditingController _searchController;
+
+  List<MarketItem> _allCryptos = [];
+  List<MarketItem> _filteredCryptos = [];
+  MarketItem? _selectedCrypto;
 
   @override
   void initState() {
     super.initState();
-    // Initialisation des contrôleurs.
-    _nameController = TextEditingController();
     _quantityController = TextEditingController();
-    _currentPriceController = TextEditingController();
+    _searchController = TextEditingController();
+    _loadCryptos();
   }
 
-  /// Crée une nouvelle cryptomonnaie.
+  void _loadCryptos() async {
+    final cryptos = await _marketService.getCryptocurrencies((progress) {});
+    setState(() {
+      _allCryptos = cryptos;
+      _filteredCryptos = cryptos;
+    });
+  }
+
+  void _filterCryptos(String query) {
+    setState(() {
+      _filteredCryptos = _allCryptos.where((crypto) {
+        return crypto.name.toLowerCase().contains(query.toLowerCase()) ||
+               crypto.symbol.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+    });
+  }
+
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _selectedCrypto != null) {
       final newCrypto = Cryptocurrency(
         id: DateTime.now().toString(),
-        name: _nameController.text,
+        name: _selectedCrypto!.name,
         quantity: double.parse(_quantityController.text),
-        currentPrice: double.parse(_currentPriceController.text),
+        currentPrice: _selectedCrypto!.price,
       );
 
       _cryptoService.saveCryptocurrency(newCrypto).then((_) {
@@ -56,7 +76,6 @@ class _CreateCryptoScreenState extends State<CreateCryptoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Créer une cryptomonnaie'),
-        backgroundColor: AppColors.secondaryColor,
       ),
       body: Form(
         key: _formKey,
@@ -64,47 +83,40 @@ class _CreateCryptoScreenState extends State<CreateCryptoScreen> {
           padding: const EdgeInsets.all(16.0),
           children: [
             TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nom de la cryptomonnaie'),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Veuillez entrer un nom de cryptomonnaie';
-                }
-                return null;
-              },
+              controller: _searchController,
+              decoration: const InputDecoration(labelText: 'Rechercher une cryptomonnaie'),
+              onChanged: _filterCryptos,
             ),
             const SizedBox(height: 16.0),
-            TextFormField(
-              controller: _quantityController,
-              decoration: const InputDecoration(labelText: 'Quantité'),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Veuillez entrer une quantité';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Veuillez entrer un nombre valide';
-                }
-                return null;
-              },
-            ),
+            if (_filteredCryptos.isNotEmpty)
+              ..._filteredCryptos.map((crypto) => ListTile(
+                title: Text(crypto.name),
+                subtitle: Text(crypto.symbol),
+                onTap: () {
+                  setState(() {
+                    _selectedCrypto = crypto;
+                    _searchController.text = crypto.name;
+                    _filteredCryptos = [];
+                  });
+                },
+              )),
             const SizedBox(height: 16.0),
-            TextFormField(
-              controller: _currentPriceController,
-              decoration: const InputDecoration(labelText: 'Prix actuel'),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Veuillez entrer un prix actuel';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Veuillez entrer un nombre valide';
-                }
-                return null;
-              },
-            ),
+            if (_selectedCrypto != null)
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Quantité'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une quantité';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
+              ),
             const SizedBox(height: 30),
-            // Bouton pour créer la cryptomonnaie.
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -130,10 +142,8 @@ class _CreateCryptoScreenState extends State<CreateCryptoScreen> {
 
   @override
   void dispose() {
-    // Nettoyage des contrôleurs lors de la destruction de l'état.
-    _nameController.dispose();
     _quantityController.dispose();
-    _currentPriceController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }

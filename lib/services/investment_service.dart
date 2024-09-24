@@ -20,7 +20,7 @@ class InvestmentService {
     List<Investment> investments = await getInvestments();
     investments.add(investment);
     List<Map<String, dynamic>> jsonData =
-        investments.map((inv) => inv.toJson()).toList();
+        investments.map((i) => i.toJson()).toList();
     await prefs.setString(_storageKeyInvestments, jsonEncode(jsonData));
   }
 
@@ -32,7 +32,7 @@ class InvestmentService {
     if (index != -1) {
       investments[index] = updatedInvestment;
       List<Map<String, dynamic>> jsonData =
-          investments.map((inv) => inv.toJson()).toList();
+          investments.map((i) => i.toJson()).toList();
       await prefs.setString(_storageKeyInvestments, jsonEncode(jsonData));
     }
   }
@@ -42,7 +42,7 @@ class InvestmentService {
     List<Investment> investments = await getInvestments();
     investments.removeWhere((investment) => investment.id == investmentId);
     List<Map<String, dynamic>> jsonData =
-        investments.map((inv) => inv.toJson()).toList();
+        investments.map((i) => i.toJson()).toList();
     await prefs.setString(_storageKeyInvestments, jsonEncode(jsonData));
   }
 }
